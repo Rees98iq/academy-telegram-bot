@@ -8,5 +8,3 @@ services:
     envVars:
       - key: BOT_TOKEN
         value: 8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo
-      - key: WEBHOOK_URL
-        value: https://academy-manarat-bot.onrender.com
