@@ -13,9 +13,11 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
 # التوكن من متغيرات البيئة
 TOKEN = os.getenv('BOT_TOKEN', '8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL', '') + '/webhook'
 
 # بيانات الكورسات
 COURSES_DATA = {
@@ -25,7 +27,7 @@ COURSES_DATA = {
             "كورس رقصة الحياة",
             "الكورس العملاق البوابات النجمية",
             "عقود الأرواح / دروسها / إكتشاف رسائل الروح",
-            "كورس أنواع النفوس",
+            "كورس أنواع النفوس", 
             "كورس تنظيف ذاكرة المشاعر و الأفكار",
             "حقيبـة المشاكل النفسـية (10 مشاكل نفسية)",
             "كورس مدخل الى عالم التجميل",
@@ -50,12 +52,12 @@ COURSES_DATA = {
         ]
     },
     "د. منار عمران": {
-        "count": 35,
+        "count": 35, 
         "courses": [
             "الكورس العملاق البوابات النجمية",
             "انواع التعلق",
             "الطاقة الجنسية",
-            "الفنغ شوي طاقة المنزل",
+            "الفنغ شوي طاقة المنزل", 
             "مواهب الروح",
             "باقة حكايات الاطفال 1",
             "باقة حكايات الاطفال 2",
@@ -72,7 +74,7 @@ COURSES_DATA = {
             "عالم الماورائيات",
             "اتيكيت وبروتوكول دولي",
             "القوانين الكونية",
-            "عقود الارواح",
+            "عقود الارواح", 
             "علم الانيجرام",
             "مواعيد سرية - كيمياء الحب",
             "ميزان الانوثة والذكورة",
@@ -84,7 +86,7 @@ COURSES_DATA = {
             "التأنيب",
             "الرفض",
             "اقلال قيمة الذات",
-            "عقدة الكمال",
+            "عقدة الكمال", 
             "التوحد",
             "مشاكل عاطفية وجنسية"
         ]
@@ -105,8 +107,9 @@ class LocalAI:
                 "🕊️ مرحباً! نورت المكان بطاقتك الجميلة 🌙"
             ],
             "شكر": [
-                "💖 العفو! شكراً لطاقتك الجميلة وتفاعلك الرائع 🌸",
-                "🌟 شكراً لك! وجودك يضيف نوراً خاصاً لهذا المكان ✨"
+                "💖 العفو! شكراً لطاقتك الجميلة وتفاعلك الرائع 🌸", 
+                "🌟 شكراً لك! وجودك يضيف نوراً خاصاً لهذا المكان ✨",
+                "🙏 الله يبارك فيك! شكراً لاهتمامك وطاقتك الإيجابية 💫"
             ],
             "أسئلة": {
                 "كيف أسجل": "📝 **طريقة التسجيل:**\n\n1. اختر الكورس المناسب\n2. تواصل عبر الواتساب: +966XXXXXXXXX\n3. ادفع الرسوم\n4. احصل على المواد فوراً\n\n🎁 خصم 10% للمشتركين الجدد!",
@@ -121,27 +124,32 @@ class LocalAI:
         if any(word in message_lower for word in ["مرحبا", "اهلا", "السلام", "اهلين"]):
             return random.choice(self.knowledge_base["تحية"])
         
-        elif any(word in message_lower for word in ["شكر", "ممتاز", "رائع"]):
+        elif any(word in message_lower for word in ["شكر", "ممتاز", "رائع", "جميل"]):
             return random.choice(self.knowledge_base["شكر"])
         
-        elif any(word in message_lower for word in ["سجل", "اشترك", "تسجيل"]):
+        elif any(word in message_lower for word in ["سجل", "اشترك", "تسجيل", "اشتراك"]):
             return self.knowledge_base["أسئلة"]["كيف أسجل"]
         
-        elif any(word in message_lower for word in ["سعر", "ثمن", "تكلفة"]):
+        elif any(word in message_lower for word in ["سعر", "ثمن", "تكلفة", "كم يكلف"]):
             return self.knowledge_base["أسئلة"]["الأسعار"]
         
-        elif any(word in message_lower for word in ["مدة", "كم مدة"]):
+        elif any(word in message_lower for word in ["مدة", "كم مدة", "كم وقت"]):
             return self.knowledge_base["أسئلة"]["المدة"]
         
         else:
             responses = [
-                "🤔 سؤال جميل! للاستفسارات التفصيلية، تواصل معنا على الواتساب: +966XXXXXXXXX",
+                "🤔 سؤال جميل! للاستفسارات التفصيلية عن الكورسات، تواصل معنا مباشرة على الواتساب 📱",
                 "💭 أرى أن طاقتك جميلة اليوم! هل تريد معرفة شيء محدد عن كورساتنا؟",
-                "✨ يمكنني مساعدتك في معلومات الكورسات والأسعار والتسجيل. ماذا تريد أن تعرف؟"
+                "✨ يمكنني مساعدتك في معلومات الكورسات والأسعار والتسجيل. ماذا تريد أن تعرف؟",
+                "🎯 للاستفسارات التفصيلية، يفضل التواصل مباشرة مع فريق الدعم على الرقم: +966XXXXXXXXX"
             ]
             return random.choice(responses)
 
+# إنشاء instance من الذكاء الاصطناعي المحلي
 ai_assistant = LocalAI()
+
+# إنشاء التطبيق مرة واحدة فقط
+application = Application.builder().token(TOKEN).build()
 
 # وظائف البوت
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -162,7 +170,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard = [
         [InlineKeyboardButton("📖 عرض الكورسات", callback_data="academy_courses")],
-        [InlineKeyboardButton("💰 الأسعار", callback_data="pricing_info")],
+        [InlineKeyboardButton("💰 الأسعار", callback_data="pricing_info")], 
         [InlineKeyboardButton("📞 تواصل معنا", callback_data="contact_info")],
         [InlineKeyboardButton("💬 محادثة ذكية", callback_data="ai_chat")]
     ]
@@ -177,7 +185,7 @@ async def show_courses(update: Update, context: ContextTypes.DEFAULT_TYPE):
     courses = COURSES_DATA["أكاديمية منارات"]["courses"]
     courses_text = "🎯 **كورسات أكاديمية منارات** \n\n"
     
-    for i, course in enumerate(courses[:10], 1):  # عرض أول 10 كورسات فقط
+    for i, course in enumerate(courses[:10], 1):
         courses_text += f"{i}. {course}\n"
     
     courses_text += f"\n📊 **إجمالي عدد الكورسات: {len(courses)} كورس**"
@@ -201,7 +209,7 @@ async def pricing_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🎯 **الكورسات الأساسية:**
 • كورسات الطاقة: 499 - 799 ر.س
-• دورات العلاقات: 599 - 899 ر.س
+• دورات العلاقات: 599 - 899 ر.س  
 • برامج التطوير: 699 - 999 ر.س
 
 💎 **الكورسات المتقدمة:**
@@ -216,7 +224,7 @@ async def pricing_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🎁 **خصومات خاصة:**
 • 10% للطلاب الجدد
-• 15% للعائلات
+• 15% للعائلات  
 • 20% للمجموعات
 
 💳 **طرق الدفع:** بنكي، تحويل، STC Pay
@@ -239,7 +247,7 @@ async def contact_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 📞 **تواصل مع أكاديمية منارات**
 
 💬 **الواتساب:** +966XXXXXXXXX
-📧 **البريد الإلكتروني:** info@manarat-academy.com
+📧 **البريد الإلكتروني:** info@manarat-academy.com  
 🌐 **الموقع:** www.manarat-academy.com
 
 🕒 **أوقات الدعم:**
@@ -248,7 +256,7 @@ async def contact_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🎯 **للتسجيل في الكورسات:**
 1. اختر الكورس المناسب
-2. تواصل معنا على الواتساب
+2. تواصل معنا على الواتساب  
 3. احصل على خصم 10% كمشترك جديد
 
 ✨ **نحن هنا لمساعدتك في رحلتك الروحية**
@@ -256,7 +264,7 @@ async def contact_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard = [
         [InlineKeyboardButton("💰 الأسعار", callback_data="pricing_info")],
-        [InlineKeyboardButton("📖 الكورسات", callback_data="academy_courses")],
+        [InlineKeyboardButton("📖 الكورسات", callback_data="academy_courses")], 
         [InlineKeyboardButton("🏠 الرئيسية", callback_data="main_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -272,7 +280,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🤖 **يمكنك سؤالي عن:**
 
-• معلومات عن كورس معين
+• معلومات عن كورس معين  
 • أسعار الكورسات 💰
 • طريقة التسجيل 📝
 • مدة الكورسات ⏰
@@ -282,7 +290,7 @@ async def ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     
     await query.edit_message_text(
-        chat_info,
+        chat_info, 
         parse_mode='Markdown',
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")]])
     )
@@ -315,7 +323,7 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📖 عرض الكورسات", callback_data="academy_courses")],
         [InlineKeyboardButton("💰 الأسعار", callback_data="pricing_info")],
-        [InlineKeyboardButton("📞 تواصل معنا", callback_data="contact_info")],
+        [InlineKeyboardButton("📞 تواصل معنا", callback_data="contact_info")], 
         [InlineKeyboardButton("💬 محادثة ذكية", callback_data="ai_chat")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -328,7 +336,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     handlers = {
         "academy_courses": show_courses,
-        "pricing_info": pricing_info,
+        "pricing_info": pricing_info, 
         "contact_info": contact_info,
         "ai_chat": ai_chat,
         "main_menu": main_menu
@@ -337,20 +345,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data in handlers:
         await handlers[data](update, context)
 
-# إعداد التطبيق
-def create_application():
-    application = Application.builder().token(TOKEN).build()
-    
-    # إضافة المعالجات
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ai_message))
-    application.add_handler(CallbackQueryHandler(button_handler))
-    
-    return application
+# إعداد المعالجات (مرة واحدة فقط)
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CommandHandler("help", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ai_message))
+application.add_handler(CallbackQueryHandler(button_handler))
 
-# إنشاء التطبيق
-application = create_application()
+# Initialize application (لا تستخدم run_polling)
+application.initialize()
 
 # routes للتطبيق
 @app.route('/')
@@ -364,18 +366,32 @@ def webhook():
         application.process_update(update)
         return 'OK'
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Webhook error: {e}")
         return 'Error', 500
 
 @app.route('/set_webhook')
 def set_webhook():
-    webhook_url = os.getenv('WEBHOOK_URL', '') + '/webhook'
-    if webhook_url:
-        success = application.bot.set_webhook(webhook_url)
-        return f"✅ Webhook setup: {success}"
-    return "❌ WEBHOOK_URL not set"
+    try:
+        if WEBHOOK_URL and 'render.com' in WEBHOOK_URL:
+            success = application.bot.set_webhook(WEBHOOK_URL)
+            return f"✅ Webhook setup: {success}"
+        return "❌ WEBHOOK_URL not set properly"
+    except Exception as e:
+        return f"❌ Error setting webhook: {e}"
 
-# التشغيل
+# التشغيل الرئيسي
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    
+    # إعداد webhook تلقائياً عند التشغيل
+    try:
+        if WEBHOOK_URL and 'render.com' in WEBHOOK_URL:
+            application.bot.set_webhook(WEBHOOK_URL)
+            print(f"✅ Webhook set to: {WEBHOOK_URL}")
+        else:
+            print("⚠️  WEBHOOK_URL not set, using polling")
+    except Exception as e:
+        print(f"❌ Error setting webhook: {e}")
+    
+    print("🚀 Starting Flask app...")
+    app.run(host='0.0.0.0', port=port, debug=False)
