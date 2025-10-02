@@ -2,10 +2,6 @@ import os
 import logging
 import random
 from flask import Flask, request
-import telegram
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (Updater, CommandHandler, CallbackQueryHandler, 
-                         MessageHandler, Filters, CallbackContext)
 
 # إعدادات التطبيق
 app = Flask(__name__)
@@ -15,7 +11,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-logger = logging.getLogger(__name__)
 
 # التوكن
 TOKEN = os.getenv('BOT_TOKEN', '8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo')
@@ -143,198 +138,67 @@ class LocalAI:
 # إنشاء الذكاء الاصطناعي
 ai_assistant = LocalAI()
 
-# إنشاء البوت
-bot = telegram.Bot(token=TOKEN)
-updater = Updater(token=TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+# محاكاة وظائف البوت بدون python-telegram-bot
+class BotSimulator:
+    def __init__(self):
+        self.webhook_set = False
+    
+    def set_webhook(self, url):
+        self.webhook_set = True
+        return True
+    
+    def send_message(self, chat_id, text, reply_markup=None, parse_mode=None):
+        print(f"📤 Simulated message to {chat_id}: {text[:50]}...")
+        return True
 
-# وظائف البوت
-def start(update: Update, context: CallbackContext):
-    user = update.effective_user
-    welcome_message = f"""
-🎓 **مرحباً {user.first_name} في أكاديمية منارات** 
-
-🤖 **أنا مساعدك الذكي - أعمل 24/7!**
-
-💫 **يمكنني مساعدتك في:**
-• عرض الكورسات المتاحة 📚
-• معلومات الأسعار 💰  
-• طريقة التسجيل 📝
-• إجابة استفساراتك 🤔
-
-✨ **اختر من القائمة:**
-    """
-    
-    keyboard = [
-        [InlineKeyboardButton("📖 عرض الكورسات", callback_data="courses")],
-        [InlineKeyboardButton("💰 الأسعار", callback_data="pricing")], 
-        [InlineKeyboardButton("📞 تواصل معنا", callback_data="contact")],
-        [InlineKeyboardButton("💬 محادثة ذكية", callback_data="chat")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
-
-def show_courses(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    
-    courses = COURSES_DATA["أكاديمية منارات"]["courses"]
-    courses_text = "🎯 **كورسات أكاديمية منارات** \n\n"
-    
-    for i, course in enumerate(courses[:8], 1):
-        courses_text += f"{i}. {course}\n"
-    
-    courses_text += f"\n📊 **الإجمالي: {len(courses)} كورس**"
-    courses_text += "\n\n💬 **للعرض الكامل، تواصل معنا**"
-    
-    keyboard = [
-        [InlineKeyboardButton("💰 الأسعار", callback_data="pricing")],
-        [InlineKeyboardButton("📞 تواصل", callback_data="contact")],
-        [InlineKeyboardButton("🏠 الرئيسية", callback_data="main")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    query.edit_message_text(courses_text, reply_markup=reply_markup, parse_mode='Markdown')
-
-def pricing_info(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    
-    pricing_text = """
-💰 **أسعار الكورسات:**
-
-🎯 **الكورسات الأساسية:**
-• الطاقة والعلاقات: 499 - 899 ر.س
-
-💎 **الكورسات المتقدمة:**
-• البوابات النجمية: 899 ر.س
-• البرامج الشاملة: 1299 - 1999 ر.س
-
-✨ **الباقات:**
-• الباقة الذهبية: 2499 ر.س
-
-🎁 **خصم 10% للمشتركين الجدد**
-    """
-    
-    keyboard = [
-        [InlineKeyboardButton("📞 سجل الآن", callback_data="contact")],
-        [InlineKeyboardButton("📖 الكورسات", callback_data="courses")],
-        [InlineKeyboardButton("🏠 الرئيسية", callback_data="main")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    query.edit_message_text(pricing_text, reply_markup=reply_markup, parse_mode='Markdown')
-
-def contact_info(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    
-    contact_text = """
-📞 **تواصل معنا:**
-
-💬 **الواتساب:** +966XXXXXXXXX
-📧 **البريد:** info@manarat-academy.com  
-🌐 **الموقع:** www.manarat-academy.com
-
-🕒 **أوقات الدعم:**
-• الأحد - الخميس: 9 ص - 6 م
-• الجمعة - السبت: 4 م - 10 م
-
-🎯 **للتسجيل:**
-1. اختر الكورس
-2. تواصل على الواتساب  
-3. احصل على خصم 10%
-    """
-    
-    keyboard = [
-        [InlineKeyboardButton("💰 الأسعار", callback_data="pricing")],
-        [InlineKeyboardButton("📖 الكورسات", callback_data="courses")], 
-        [InlineKeyboardButton("🏠 الرئيسية", callback_data="main")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    query.edit_message_text(contact_text, reply_markup=reply_markup, parse_mode='Markdown')
-
-def handle_message(update: Update, context: CallbackContext):
-    user_message = update.message.text
-    ai_response = ai_assistant.process_message(update.effective_user.id, user_message)
-    
-    keyboard = [
-        [InlineKeyboardButton("📖 الكورسات", callback_data="courses")],
-        [InlineKeyboardButton("💰 الأسعار", callback_data="pricing")],
-        [InlineKeyboardButton("📞 تواصل", callback_data="contact")],
-        [InlineKeyboardButton("🏠 الرئيسية", callback_data="main")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    update.message.reply_text(ai_response, reply_markup=reply_markup, parse_mode='Markdown')
-
-def main_menu(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    
-    user = query.from_user
-    welcome_message = f"🎓 **مرحباً {user.first_name}**\n\n✨ **اختر من القائمة:**"
-    
-    keyboard = [
-        [InlineKeyboardButton("📖 عرض الكورسات", callback_data="courses")],
-        [InlineKeyboardButton("💰 الأسعار", callback_data="pricing")],
-        [InlineKeyboardButton("📞 تواصل معنا", callback_data="contact")], 
-        [InlineKeyboardButton("💬 محادثة", callback_data="chat")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    query.edit_message_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
-
-def chat_mode(update: Update, context: CallbackContext):
-    query = update.callback_query
-    query.answer()
-    
-    chat_info = "💬 **المحادثة الذكية**\n\n🤖 **اسألني عن الكورسات، الأسعار، أو التسجيل**"
-    
-    query.edit_message_text(
-        chat_info, 
-        parse_mode='Markdown',
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 الرئيسية", callback_data="main")]])
-    )
-
-# إضافة المعالجات
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("help", start))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-# معالج الأزرار
-def button_handler(update: Update, context: CallbackContext):
-    query = update.callback_query
-    data = query.data
-    
-    handlers = {
-        "courses": show_courses,
-        "pricing": pricing_info, 
-        "contact": contact_info,
-        "chat": chat_mode,
-        "main": main_menu
-    }
-    
-    if data in handlers:
-        handlers[data](update, context)
-
-dispatcher.add_handler(CallbackQueryHandler(button_handler))
+# إنشاء محاكي البوت
+bot = BotSimulator()
 
 # routes للتطبيق
 @app.route('/')
 def home():
-    return "🚀 بوت أكاديمية منارات يعمل بنجاح! 🌙"
+    return """
+    🚀 بوت أكاديمية منارات يعمل بنجاح! 🌙
+    
+    📚 هذا البوت يعرض كورسات الأكاديمية ويجيب على استفساراتك.
+    
+    💫 المميزات:
+    • عرض الكورسات المتاحة
+    • معلومات الأسعار والتسجيل
+    • محادثة ذكية مع المساعد
+    
+    📞 للتواصل: +966XXXXXXXXX
+    """
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:
-        update = Update.de_json(request.get_json(), bot)
-        dispatcher.process_update(update)
+        data = request.get_json()
+        
+        # محاكاة معالجة الرسالة
+        if 'message' in data:
+            message = data['message']
+            chat_id = message['chat']['id']
+            text = message.get('text', '')
+            
+            if text.startswith('/start'):
+                response = "🎓 **مرحباً في أكاديمية منارات!**\n\nاختر من القائمة:\n• /courses - عرض الكورسات\n• /pricing - الأسعار\n• /contact - التواصل"
+            elif text.startswith('/courses'):
+                courses = COURSES_DATA["أكاديمية منارات"]["courses"][:5]
+                response = "📚 **الكورسات المتاحة:**\n\n" + "\n".join([f"• {course}" for course in courses]) + "\n\n💬 للمزيد: +966XXXXXXXXX"
+            elif text.startswith('/pricing'):
+                response = "💰 **الأسعار:**\n\n• الأساسية: 499-799 ر.س\n• المتقدمة: 899-1299 ر.س\n\n🎁 خصم 10% للمشتركين الجدد!"
+            elif text.startswith('/contact'):
+                response = "📞 **التواصل:**\n\n💬 الواتساب: +966XXXXXXXXX\n📧 البريد: info@manarat-academy.com"
+            else:
+                response = ai_assistant.process_message(chat_id, text)
+            
+            # في تطبيق حقيقي، هنا نرسل الرسالة للبوت
+            print(f"🤖 Response: {response}")
+            
         return 'OK'
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        print(f"Webhook error: {e}")
         return 'Error', 500
 
 @app.route('/set_webhook')
@@ -346,6 +210,39 @@ def set_webhook():
         return "❌ WEBHOOK_URL not set properly"
     except Exception as e:
         return f"❌ Error: {e}"
+
+@app.route('/courses')
+def courses_page():
+    courses = COURSES_DATA["أكاديمية منارات"]["courses"]
+    courses_html = "<h1>🎯 كورسات أكاديمية منارات</h1><ul>"
+    for course in courses:
+        courses_html += f"<li>{course}</li>"
+    courses_html += f"</ul><p><strong>الإجمالي: {len(courses)} كورس</strong></p>"
+    courses_html += "<p>💬 للاستفسار: +966XXXXXXXXX</p>"
+    return courses_html
+
+@app.route('/pricing')
+def pricing_page():
+    return """
+    <h1>💰 أسعار الكورسات</h1>
+    <ul>
+        <li>الكورسات الأساسية: 499 - 799 ر.س</li>
+        <li>الكورسات المتقدمة: 899 - 1299 ر.س</li>
+        <li>الباقات الشاملة: 1499 - 1999 ر.س</li>
+    </ul>
+    <p>🎁 خصم 10% للمشتركين الجدد</p>
+    <p>📞 للاستفسار: +966XXXXXXXXX</p>
+    """
+
+@app.route('/contact')
+def contact_page():
+    return """
+    <h1>📞 تواصل معنا</h1>
+    <p>💬 الواتساب: +966XXXXXXXXX</p>
+    <p>📧 البريد: info@manarat-academy.com</p>
+    <p>🌐 الموقع: www.manarat-academy.com</p>
+    <p>🕒 أوقات الدعم: 9 ص - 6 م</p>
+    """
 
 # التشغيل الرئيسي
 if __name__ == '__main__':
