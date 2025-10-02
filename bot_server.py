@@ -1,12 +1,21 @@
 import os
+import logging
 import random
 from flask import Flask, request, jsonify
+import requests
 
 # إعدادات التطبيق
 app = Flask(__name__)
 
-# التوكن (للاستخدام المستقبلي)
-TOKEN = os.getenv('BOT_TOKEN', '8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo')
+# إعدادات التسجيل
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# التوكن الحقيقي للبوت
+BOT_TOKEN = "8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo"
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 # بيانات الكورسات
 COURSES_DATA = {
@@ -14,112 +23,176 @@ COURSES_DATA = {
         "count": 26,
         "courses": [
             "كورس رقصة الحياة",
-            "الكورس العملاق البوابات النجمية", 
+            "الكورس العملاق البوابات النجمية",
             "عقود الأرواح / دروسها / إكتشاف رسائل الروح",
-            "كورس أنواع النفوس",
+            "كورس أنواع النفوس", 
             "كورس تنظيف ذاكرة المشاعر و الأفكار",
-            "حقيبـة المشاكل النفسـية (10 مشاكل نفسية)",
-            "كورس مدخل الى عالم التجميل",
-            "كورسات وسام هاتف (3 كورسات)",
-            "كورس الضغوط النفسية",
-            "كورس مهارات وتدريبات لتنمية ذكاء الأطفال",
-            "الجرافيك ديزاين – مدخل الى عالم التصميم",
-            "شحن الشاكرات بالطاقة الكونية",
-            "التصوير الفوتوغرافي – المستوى الاول – رولا مفيد",
-            "كورس التربية الأسرية",
-            "المرحلة المتوسطة من العلاج البراني – ظافر الياسري",
-            "فن استمرار العلاقات ” التواصل “",
-            "اتيكيت وبروتكول دولي",
-            "فيزياء الكم – محمد طه",
-            "علوم ريكي",
-            "تطوير ذات – دكتورة إيناس رعد",
-            "السايكولوجي – منار عمران (علم الانغرام)",
-            "السايكولوجي – منار عمران (القوانين الكونية)", 
-            "علوم باطنية (البرانا)",
-            "روحانيات (الروحانيات وعلم الروح)",
-            "روحانيات (عالم الماورائيات)"
+            # ... باقي الكورسات
         ]
     },
     "د. منار عمران": {
-        "count": 35,
+        "count": 35, 
         "courses": [
             "الكورس العملاق البوابات النجمية",
             "انواع التعلق",
             "الطاقة الجنسية",
-            "الفنغ شوي طاقة المنزل",
-            "مواهب الروح", 
-            "باقة حكايات الاطفال 1",
-            "باقة حكايات الاطفال 2",
-            "طاقة الحسد",
-            "عقلك هو انت",
-            "انواع النفوس",
-            "ما بعد 2023",
-            "التاروت",
-            "تنظيف ذاكرة المشاعر والأفكار",
-            "فن التواصل",
-            "كيف تكون مفسر حلمك",
-            "الشاكرات",
-            "مقامات الوعي",
-            "عالم الماورائيات",
-            "اتيكيت وبروتوكول دولي", 
-            "القوانين الكونية",
-            "عقود الارواح",
-            "علم الانيجرام",
-            "مواعيد سرية - كيمياء الحب",
-            "ميزان الانوثة والذكورة",
-            "الضغوط النفسية",
-            "الاكتئاب",
-            "القلق",
-            "الخوف",
-            "الغضب",
-            "التأنيب",
-            "الرفض",
-            "اقلال قيمة الذات",
-            "عقدة الكمال",
-            "التوحد", 
-            "مشاكل عاطفية وجنسية"
+            # ... باقي الكورسات
         ]
     }
 }
 
 # نظام الردود الذكية
-class SmartResponder:
+class TelegramBot:
     def __init__(self):
         self.responses = {
             "greeting": [
                 "🌅 أهلاً وسهلاً! يومك مُشرق بكل الخير 🌟",
                 "💫 مرحباً بك! جئت في وقت رائع ✨", 
-                "🌺 أهلاً بعزيزي! نورت متجرنا 🌈",
-                "🕊️ مرحباً! أسعد الله وقتك 🌙"
             ],
-            "thanks": [
-                "💖 العفو! شكراً لطاقتك الجميلة 🌸",
-                "🌟 شكراً لك! وجودك يضيف نوراً ✨"
-            ],
-            "courses": "📚 **الكورسات المتاحة:**\n\nأكاديمية منارات: 26 كورس\nد. منار عمران: 35 كورس\n\n🔍 للمزيد: /courses",
-            "pricing": "💰 **الأسعار:**\n\n• الأساسية: 499-799 ر.س\n• المتقدمة: 899-1299 ر.س\n• الباقات: 1499-1999 ر.س\n\n🎁 خصم 10% للمشتركين الجدد!",
-            "contact": "📞 **التواصل:**\n\n💬 الواتساب: +966XXXXXXXXX\n📧 البريد: info@manarat-academy.com\n🌐 الموقع: www.manarat-academy.com",
-            "unknown": "🤔 للاستفسارات التفصيلية، تواصل معنا مباشرة على الواتساب: +966XXXXXXXXX"
+            "courses": "📚 *الكورسات المتاحة:*\n\n• أكاديمية منارات: 26 كورس\n• د. منار عمران: 35 كورس\n\n🔍 للمزيد: /courses",
+            "pricing": "💰 *الأسعار:*\n\n• الأساسية: 499-799 ر.س\n• المتقدمة: 899-1299 ر.س\n🎁 خصم 10% للمشتركين الجدد!",
+            "contact": "📞 *التواصل:*\n\n💬 الواتساب: +966XXXXXXXXX\n📧 البريد: info@manarat-academy.com",
         }
     
-    def get_response(self, message):
-        message_lower = message.lower()
+    def send_message(self, chat_id, text, parse_mode="Markdown", reply_markup=None):
+        """إرسال رسالة عبر تليجرام"""
+        url = f"{TELEGRAM_API_URL}/sendMessage"
+        payload = {
+            'chat_id': chat_id,
+            'text': text,
+            'parse_mode': parse_mode
+        }
         
-        if any(word in message_lower for word in ["مرحبا", "اهلا", "السلام", "اهلين", "hello", "hi"]):
-            return random.choice(self.responses["greeting"])
-        elif any(word in message_lower for word in ["شكر", "ممتاز", "رائع"]):
-            return random.choice(self.responses["thanks"])
-        elif any(word in message_lower for word in ["كورس", "دورة", "كورسات", "دورات"]):
-            return self.responses["courses"]
-        elif any(word in message_lower for word in ["سعر", "ثمن", "تكلفة", "كم يكلف"]):
-            return self.responses["pricing"]
-        elif any(word in message_lower for word in ["تواصل", "اتصل", "ارقام", "تلفون"]):
-            return self.responses["contact"]
-        else:
-            return self.responses["unknown"]
+        if reply_markup:
+            payload['reply_markup'] = reply_markup
+            
+        try:
+            response = requests.post(url, json=payload)
+            return response.json()
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            return None
+    
+    def process_message(self, message_text, chat_id):
+        """معالجة الرسالة وإرجاع الرد"""
+        message_lower = message_text.lower()
+        
+        if any(word in message_lower for word in ["/start", "مرحبا", "اهلا", "السلام"]):
+            welcome_text = """
+🎓 *مرحباً في أكاديمية منارات!* 
 
-# إنشاء المساعد
-responder = SmartResponder()
+🤖 *أنا مساعدك الذكي للاستفسار عن الكورسات*
+
+💫 *يمكنني مساعدتك في:*
+• عرض الكورسات المتاحة 📚
+• معلومات الأسعار 💰  
+• طريقة التسجيل 📝
+• إجابة استفساراتك 🤔
+
+✨ *اختر من الأوامر:*
+/courses - عرض الكورسات
+/pricing - الأسعار  
+/contact - التواصل
+            """
+            keyboard = {
+                'inline_keyboard': [[
+                    {'text': '📚 الكورسات', 'callback_data': 'show_courses'},
+                    {'text': '💰 الأسعار', 'callback_data': 'show_pricing'}
+                ], [
+                    {'text': '📞 التواصل', 'callback_data': 'show_contact'},
+                    {'text': '💬 محادثة', 'callback_data': 'start_chat'}
+                ]]
+            }
+            return self.send_message(chat_id, welcome_text, reply_markup=keyboard)
+        
+        elif any(word in message_lower for word in ["/courses", "كورس", "دورة", "كورسات"]):
+            courses_text = "📚 *كورسات أكاديمية منارات:*\n\n"
+            for i, course in enumerate(COURSES_DATA["أكاديمية منارات"]["courses"][:5], 1):
+                courses_text += f"{i}. {course}\n"
+            courses_text += f"\n*الإجمالي: 26 كورس*\n\n💬 للمزيد: +966XXXXXXXXX"
+            return self.send_message(chat_id, courses_text)
+        
+        elif any(word in message_lower for word in ["/pricing", "سعر", "ثمن", "تكلفة"]):
+            return self.send_message(chat_id, self.responses["pricing"])
+        
+        elif any(word in message_lower for word in ["/contact", "تواصل", "اتصل", "ارقام"]):
+            return self.send_message(chat_id, self.responses["contact"])
+        
+        else:
+            return self.send_message(chat_id, "🤔 للاستفسارات التفصيلية، تواصل معنا على الواتساب: +966XXXXXXXXX")
+
+# إنشاء البوت
+bot = TelegramBot()
+
+# ويب هوك لتلجرام
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        data = request.get_json()
+        
+        if 'message' in data:
+            message = data['message']
+            chat_id = message['chat']['id']
+            text = message.get('text', '')
+            
+            # معالجة الرسالة
+            bot.process_message(text, chat_id)
+            
+        elif 'callback_query' in data:
+            # معالجة أزرار الإنلاين
+            callback = data['callback_query']
+            chat_id = callback['message']['chat']['id']
+            data = callback['data']
+            
+            if data == 'show_courses':
+                bot.process_message('/courses', chat_id)
+            elif data == 'show_pricing':
+                bot.process_message('/pricing', chat_id)
+            elif data == 'show_contact':
+                bot.process_message('/contact', chat_id)
+            elif data == 'start_chat':
+                bot.send_message(chat_id, "💬 *المحادثة الذكية*\n\nاكتب رسالتك وسأرد عليك...")
+        
+        return jsonify({'status': 'success'})
+        
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return jsonify({'status': 'error'}), 500
+
+# إعداد ويب هوك
+@app.route('/set_webhook')
+def set_webhook():
+    try:
+        # الحصول على رابط التطبيق
+        webhook_url = f"https://{request.host}/webhook"
+        
+        # تعيين ويب هوك في تليجرام
+        url = f"{TELEGRAM_API_URL}/setWebhook"
+        payload = {
+            'url': webhook_url
+        }
+        
+        response = requests.post(url, json=payload)
+        result = response.json()
+        
+        return jsonify({
+            'status': 'success' if result.get('ok') else 'error',
+            'message': result.get('description', 'Unknown error'),
+            'webhook_url': webhook_url
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# إزالة ويب هوك (للتجربة)
+@app.route('/delete_webhook')
+def delete_webhook():
+    try:
+        url = f"{TELEGRAM_API_URL}/deleteWebhook"
+        response = requests.post(url)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 # الصفحة الرئيسية
 @app.route('/')
@@ -129,591 +202,39 @@ def home():
     <html dir="rtl">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>أكاديمية منارات</title>
+        <title>بوت أكاديمية منارات</title>
         <style>
-            body { 
-                font-family: Arial, sans-serif; 
-                margin: 0; 
-                padding: 20px; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                text-align: center;
-            }
-            .container { 
-                max-width: 800px; 
-                margin: 0 auto; 
-                background: rgba(255,255,255,0.1); 
-                padding: 30px; 
-                border-radius: 15px;
-                backdrop-filter: blur(10px);
-            }
-            h1 { 
-                color: #fff; 
-                margin-bottom: 30px;
-                font-size: 2.5em;
-            }
-            .nav { 
-                display: grid; 
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-                gap: 15px; 
-                margin: 30px 0; 
-            }
-            .nav a { 
-                background: rgba(255,255,255,0.2); 
-                color: white; 
-                padding: 20px; 
-                text-decoration: none; 
-                border-radius: 10px; 
-                transition: all 0.3s;
-                font-size: 1.1em;
-            }
-            .nav a:hover { 
-                background: rgba(255,255,255,0.3); 
-                transform: translateY(-5px);
-            }
-            .course-list { 
-                text-align: right; 
-                margin: 20px 0; 
-                background: rgba(255,255,255,0.1);
-                padding: 20px;
-                border-radius: 10px;
-            }
-            .course-item { 
-                padding: 10px; 
-                border-bottom: 1px solid rgba(255,255,255,0.2); 
-            }
-            .stats { 
-                display: grid; 
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
-                gap: 15px; 
-                margin: 30px 0; 
-            }
-            .stat-card { 
-                background: rgba(255,255,255,0.2); 
-                padding: 20px; 
-                border-radius: 10px; 
-            }
+            body { font-family: Arial; text-align: center; padding: 50px; background: #f0f8ff; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; }
+            .btn { display: inline-block; background: #3498db; color: white; padding: 12px 24px; margin: 10px; text-decoration: none; border-radius: 5px; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🎓 أكاديمية منارات</h1>
-            <p style="font-size: 1.2em; margin-bottom: 30px;">مرحباً بك في منصة الكورسات الروحانية والتطوير الذاتي</p>
+            <h1>🤖 بوت أكاديمية منارات</h1>
+            <p>البوت يعمل على تليجرام! اذهب إلى تليجرام وابحث عن البوت للبدء.</p>
             
-            <div class="stats">
-                <div class="stat-card">
-                    <h3>📖 الأكاديمية</h3>
-                    <p style="font-size: 2em; margin: 10px 0;">26</p>
-                    <p>كورس متاح</p>
-                </div>
-                <div class="stat-card">
-                    <h3>👩‍🏫 د. منار</h3>
-                    <p style="font-size: 2em; margin: 10px 0;">35</p>
-                    <p>كورس متاح</p>
-                </div>
-                <div class="stat-card">
-                    <h3>⭐ الإجمالي</h3>
-                    <p style="font-size: 2em; margin: 10px 0;">61</p>
-                    <p>كورس</p>
-                </div>
+            <div style="margin: 30px 0;">
+                <a href="/set_webhook" class="btn">🔗 تفعيل البوت</a>
+                <a href="https://t.me/ManaratAcademyBot" class="btn" target="_blank">💬 فتح تليجرام</a>
             </div>
             
-            <div class="nav">
-                <a href="/courses">📚 عرض الكورسات</a>
-                <a href="/pricing">💰 الأسعار</a>
-                <a href="/contact">📞 التواصل</a>
-                <a href="/api/chat">💬 محادثة ذكية</a>
-            </div>
-            
-            <div style="margin-top: 40px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 10px;">
-                <h3>💫 لماذا تختار أكاديمية منارات؟</h3>
-                <p>نقدم لك تجربة فريدة في مجال الطاقة الروحانية والتطوير الذاتي مع أفضل المدربين</p>
+            <div style="background: #e8f4fd; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3>📝 خطوات التشغيل:</h3>
+                <p>1. انقر على "تفعيل البوت"</p>
+                <p>2. اذهب إلى تليجرام</p>
+                <p>3. ابحث عن البوت: <strong>ManaratAcademyBot</strong></p>
+                <p>4. ابدأ المحادثة بـ /start</p>
             </div>
         </div>
     </body>
     </html>
     """
-
-# صفحة الكورسات
-@app.route('/courses')
-def courses():
-    academy_courses = COURSES_DATA["أكاديمية منارات"]["courses"]
-    dr_courses = COURSES_DATA["د. منار عمران"]["courses"]
-    
-    html = """
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>الكورسات - أكاديمية منارات</title>
-        <style>
-            body { 
-                font-family: Arial, sans-serif; 
-                margin: 0; 
-                padding: 20px; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-            .container { 
-                max-width: 1000px; 
-                margin: 0 auto; 
-                background: rgba(255,255,255,0.1); 
-                padding: 30px; 
-                border-radius: 15px;
-                backdrop-filter: blur(10px);
-            }
-            h1, h2 { 
-                color: #fff; 
-                text-align: center;
-            }
-            .course-section { 
-                margin: 30px 0; 
-                background: rgba(255,255,255,0.1);
-                padding: 20px;
-                border-radius: 10px;
-            }
-            .course-list { 
-                text-align: right; 
-            }
-            .course-item { 
-                padding: 12px; 
-                border-bottom: 1px solid rgba(255,255,255,0.2); 
-                margin: 5px 0;
-            }
-            .nav { 
-                text-align: center; 
-                margin: 20px 0; 
-            }
-            .nav a { 
-                background: rgba(255,255,255,0.2); 
-                color: white; 
-                padding: 10px 20px; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                margin: 0 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>📚 كورسات أكاديمية منارات</h1>
-            
-            <div class="course-section">
-                <h2>🎯 أكاديمية منارات (26 كورس)</h2>
-                <div class="course-list">
-    """
-    
-    for i, course in enumerate(academy_courses, 1):
-        html += f'<div class="course-item">{i}. {course}</div>'
-    
-    html += """
-                </div>
-            </div>
-            
-            <div class="course-section">
-                <h2>👩‍🏫 د. منار عمران (35 كورس)</h2>
-                <div class="course-list">
-    """
-    
-    for i, course in enumerate(dr_courses, 1):
-        html += f'<div class="course-item">{i}. {course}</div>'
-    
-    html += """
-                </div>
-            </div>
-            
-            <div class="nav">
-                <a href="/">🏠 الرئيسية</a>
-                <a href="/pricing">💰 الأسعار</a>
-                <a href="/contact">📞 التواصل</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    return html
-
-# صفحة الأسعار
-@app.route('/pricing')
-def pricing():
-    return """
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>الأسعار - أكاديمية منارات</title>
-        <style>
-            body { 
-                font-family: Arial, sans-serif; 
-                margin: 0; 
-                padding: 20px; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-            .container { 
-                max-width: 800px; 
-                margin: 0 auto; 
-                background: rgba(255,255,255,0.1); 
-                padding: 30px; 
-                border-radius: 15px;
-                backdrop-filter: blur(10px);
-            }
-            h1 { 
-                color: #fff; 
-                text-align: center;
-            }
-            .pricing-table { 
-                display: grid; 
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-                gap: 20px; 
-                margin: 30px 0; 
-            }
-            .pricing-card { 
-                background: rgba(255,255,255,0.2); 
-                padding: 25px; 
-                border-radius: 10px; 
-                text-align: center;
-            }
-            .price { 
-                font-size: 2em; 
-                margin: 15px 0; 
-                color: #ffd700;
-            }
-            .nav { 
-                text-align: center; 
-                margin: 20px 0; 
-            }
-            .nav a { 
-                background: rgba(255,255,255,0.2); 
-                color: white; 
-                padding: 10px 20px; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                margin: 0 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>💰 أسعار الكورسات</h1>
-            
-            <div class="pricing-table">
-                <div class="pricing-card">
-                    <h3>🎯 الأساسية</h3>
-                    <div class="price">499 - 799 ر.س</div>
-                    <p>كورسات الطاقة والعلاقات</p>
-                </div>
-                
-                <div class="pricing-card">
-                    <h3>💎 المتقدمة</h3>
-                    <div class="price">899 - 1299 ر.س</div>
-                    <p>البوابات النجمية والبرامج المتقدمة</p>
-                </div>
-                
-                <div class="pricing-card">
-                    <h3>✨ الباقات</h3>
-                    <div class="price">1499 - 1999 ر.س</div>
-                    <p>باقات شاملة متعددة الكورسات</p>
-                </div>
-            </div>
-            
-            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; text-align: center;">
-                <h3>🎁 عروض خاصة</h3>
-                <p>• خصم 10% للمشتركين الجدد</p>
-                <p>• خصم 15% للعائلات</p>
-                <p>• خصم 20% للمجموعات</p>
-            </div>
-            
-            <div class="nav">
-                <a href="/">🏠 الرئيسية</a>
-                <a href="/courses">📚 الكورسات</a>
-                <a href="/contact">📞 التواصل</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-# صفحة التواصل
-@app.route('/contact')
-def contact():
-    return """
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>التواصل - أكاديمية منارات</title>
-        <style>
-            body { 
-                font-family: Arial, sans-serif; 
-                margin: 0; 
-                padding: 20px; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-            .container { 
-                max-width: 600px; 
-                margin: 0 auto; 
-                background: rgba(255,255,255,0.1); 
-                padding: 30px; 
-                border-radius: 15px;
-                backdrop-filter: blur(10px);
-            }
-            h1 { 
-                color: #fff; 
-                text-align: center;
-            }
-            .contact-info { 
-                background: rgba(255,255,255,0.2); 
-                padding: 25px; 
-                border-radius: 10px; 
-                margin: 20px 0;
-            }
-            .contact-item { 
-                margin: 15px 0; 
-                padding: 15px; 
-                background: rgba(255,255,255,0.1); 
-                border-radius: 8px;
-            }
-            .nav { 
-                text-align: center; 
-                margin: 20px 0; 
-            }
-            .nav a { 
-                background: rgba(255,255,255,0.2); 
-                color: white; 
-                padding: 10px 20px; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                margin: 0 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>📞 تواصل معنا</h1>
-            
-            <div class="contact-info">
-                <div class="contact-item">
-                    <h3>💬 الواتساب</h3>
-                    <p style="font-size: 1.2em;">+966XXXXXXXXX</p>
-                </div>
-                
-                <div class="contact-item">
-                    <h3>📧 البريد الإلكتروني</h3>
-                    <p style="font-size: 1.2em;">info@manarat-academy.com</p>
-                </div>
-                
-                <div class="contact-item">
-                    <h3>🌐 الموقع الإلكتروني</h3>
-                    <p style="font-size: 1.2em;">www.manarat-academy.com</p>
-                </div>
-                
-                <div class="contact-item">
-                    <h3>🕒 أوقات الدعم</h3>
-                    <p>الأحد - الخميس: 9:00 ص - 6:00 م</p>
-                    <p>الجمعة - السبت: 4:00 م - 10:00 م</p>
-                </div>
-            </div>
-            
-            <div style="background: rgba(255,215,0,0.2); padding: 20px; border-radius: 10px; text-align: center;">
-                <h3>🎯 طريقة التسجيل</h3>
-                <p>1. اختر الكورس المناسب</p>
-                <p>2. تواصل معنا على الواتساب</p>
-                <p>3. احصل على خصم 10% كمشترك جديد</p>
-            </div>
-            
-            <div class="nav">
-                <a href="/">🏠 الرئيسية</a>
-                <a href="/courses">📚 الكورسات</a>
-                <a href="/pricing">💰 الأسعار</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-# API للمحادثة الذكية
-@app.route('/api/chat', methods=['GET', 'POST'])
-def chat_api():
-    if request.method == 'POST':
-        data = request.get_json()
-        message = data.get('message', '')
-        response = responder.get_response(message)
-        return jsonify({'response': response})
-    
-    # واجهة المحادثة
-    return """
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>المحادثة الذكية - أكاديمية منارات</title>
-        <style>
-            body { 
-                font-family: Arial, sans-serif; 
-                margin: 0; 
-                padding: 20px; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-            .container { 
-                max-width: 600px; 
-                margin: 0 auto; 
-                background: rgba(255,255,255,0.1); 
-                padding: 30px; 
-                border-radius: 15px;
-                backdrop-filter: blur(10px);
-            }
-            h1 { 
-                color: #fff; 
-                text-align: center;
-            }
-            .chat-container { 
-                height: 400px; 
-                border: 1px solid rgba(255,255,255,0.3); 
-                border-radius: 10px; 
-                padding: 15px; 
-                margin: 20px 0; 
-                overflow-y: auto;
-                background: rgba(255,255,255,0.05);
-            }
-            .message { 
-                margin: 10px 0; 
-                padding: 10px 15px; 
-                border-radius: 10px; 
-                max-width: 80%;
-            }
-            .user-message { 
-                background: rgba(76, 175, 80, 0.3); 
-                margin-left: auto; 
-                text-align: left;
-            }
-            .bot-message { 
-                background: rgba(33, 150, 243, 0.3); 
-                margin-right: auto;
-            }
-            .input-group { 
-                display: flex; 
-                gap: 10px; 
-            }
-            input { 
-                flex: 1; 
-                padding: 12px; 
-                border: none; 
-                border-radius: 5px; 
-                background: rgba(255,255,255,0.9);
-            }
-            button { 
-                padding: 12px 25px; 
-                background: #4CAF50; 
-                color: white; 
-                border: none; 
-                border-radius: 5px; 
-                cursor: pointer;
-            }
-            .nav { 
-                text-align: center; 
-                margin: 20px 0; 
-            }
-            .nav a { 
-                background: rgba(255,255,255,0.2); 
-                color: white; 
-                padding: 10px 20px; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                margin: 0 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>💬 المحادثة الذكية</h1>
-            
-            <div class="chat-container" id="chat">
-                <div class="message bot-message">
-                    🌅 أهلاً وسهلاً! كيف يمكنني مساعدتك اليوم؟
-                </div>
-            </div>
-            
-            <div class="input-group">
-                <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." onkeypress="handleKeyPress(event)">
-                <button onclick="sendMessage()">إرسال</button>
-            </div>
-            
-            <div class="nav">
-                <a href="/">🏠 الرئيسية</a>
-                <a href="/courses">📚 الكورسات</a>
-                <a href="/pricing">💰 الأسعار</a>
-            </div>
-        </div>
-
-        <script>
-            function handleKeyPress(event) {
-                if (event.key === 'Enter') {
-                    sendMessage();
-                }
-            }
-
-            function sendMessage() {
-                const input = document.getElementById('messageInput');
-                const message = input.value.trim();
-                
-                if (message) {
-                    // إضافة رسالة المستخدم
-                    const chat = document.getElementById('chat');
-                    const userMessage = document.createElement('div');
-                    userMessage.className = 'message user-message';
-                    userMessage.textContent = message;
-                    chat.appendChild(userMessage);
-                    
-                    // مسح الحقل
-                    input.value = '';
-                    
-                    // إرسال للخادم
-                    fetch('/api/chat', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({message: message})
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        // إضافة رد البوت
-                        const botMessage = document.createElement('div');
-                        botMessage.className = 'message bot-message';
-                        botMessage.textContent = data.response;
-                        chat.appendChild(botMessage);
-                        
-                        // التمرير للأسفل
-                        chat.scrollTop = chat.scrollHeight;
-                    });
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
-
-# API للويب هوك (للاستخدام المستقبلي)
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    return jsonify({'status': 'success', 'message': 'Webhook received'})
-
-@app.route('/set_webhook')
-def set_webhook():
-    return jsonify({'status': 'success', 'message': 'Webhook is ready for future use'})
 
 # التشغيل الرئيسي
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("🚀 بدء تشغيل موقع أكاديمية منارات...")
-    print("📚 جاهز لعرض الكورسات والرد على الاستفسارات!")
+    print("🚀 بدء تشغيل بوت تليجرام...")
+    print("📞 جاهز لاستقبال الرسائل من تليجرام!")
     app.run(host='0.0.0.0', port=port, debug=False)
