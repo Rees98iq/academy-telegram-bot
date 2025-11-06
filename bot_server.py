@@ -1,240 +1,406 @@
 import os
 import logging
-import random
-from flask import Flask, request, jsonify
-import requests
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# إعدادات التطبيق
-app = Flask(__name__)
-
-# إعدادات التسجيل
+# إعداد السجلات
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
-# التوكن الحقيقي للبوت
-BOT_TOKEN = "8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo"
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+# معلومات الدكتورة منار عمران
+WEBSITE = "https://manaromran11.com/"
+ACADEMY = "https://manaratacademy.com/"
+YOUTUBE = "https://www.youtube.com/@manaromran1157"
+FACEBOOK = "https://www.facebook.com/manaromran111"
+TIKTOK = "https://www.tiktok.com/@manaromraan11?lang=ar"
+INSTAGRAM = "https://www.instagram.com/manarmomran/"
+WHATSAPP = "https://api.whatsapp.com/send/?phone=905395448547&text&type=phone_number&app_absent=0"
+PHONE = "+905395448547"
 
-# بيانات الكورسات
-COURSES_DATA = {
-    "أكاديمية منارات": {
-        "count": 26,
-        "courses": [
-            "كورس رقصة الحياة",
-            "الكورس العملاق البوابات النجمية",
-            "عقود الأرواح / دروسها / إكتشاف رسائل الروح",
-            "كورس أنواع النفوس", 
-            "كورس تنظيف ذاكرة المشاعر و الأفكار",
-            # ... باقي الكورسات
-        ]
-    },
-    "د. منار عمران": {
-        "count": 35, 
-        "courses": [
-            "الكورس العملاق البوابات النجمية",
-            "انواع التعلق",
-            "الطاقة الجنسية",
-            # ... باقي الكورسات
-        ]
-    }
-}
-
-# نظام الردود الذكية
-class TelegramBot:
-    def __init__(self):
-        self.responses = {
-            "greeting": [
-                "🌅 أهلاً وسهلاً! يومك مُشرق بكل الخير 🌟",
-                "💫 مرحباً بك! جئت في وقت رائع ✨", 
-            ],
-            "courses": "📚 *الكورسات المتاحة:*\n\n• أكاديمية منارات: 26 كورس\n• د. منار عمران: 35 كورس\n\n🔍 للمزيد: /courses",
-            "pricing": "💰 *الأسعار:*\n\n• الأساسية: 499-799 ر.س\n• المتقدمة: 899-1299 ر.س\n🎁 خصم 10% للمشتركين الجدد!",
-            "contact": "📞 *التواصل:*\n\n💬 الواتساب: +966XXXXXXXXX\n📧 البريد: info@manarat-academy.com",
-        }
+# أمر البداية
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # إنشاء لوحة مفاتيح تفاعلية
+    keyboard = [
+        [InlineKeyboardButton("📚 الكورسات", callback_data='courses'),
+         InlineKeyboardButton("🌐 الموقع", callback_data='website')],
+        [InlineKeyboardButton("🎓 الأكاديمية", callback_data='academy'),
+         InlineKeyboardButton("💼 حجز استشارة", callback_data='consultation')],
+        [InlineKeyboardButton("📱 التواصل الاجتماعي", callback_data='social'),
+         InlineKeyboardButton("❓ المساعدة", callback_data='help')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     
-    def send_message(self, chat_id, text, parse_mode="Markdown", reply_markup=None):
-        """إرسال رسالة عبر تليجرام"""
-        url = f"{TELEGRAM_API_URL}/sendMessage"
-        payload = {
-            'chat_id': chat_id,
-            'text': text,
-            'parse_mode': parse_mode
-        }
-        
-        if reply_markup:
-            payload['reply_markup'] = reply_markup
-            
-        try:
-            response = requests.post(url, json=payload)
-            return response.json()
-        except Exception as e:
-            print(f"Error sending message: {e}")
-            return None
+    welcome_message = """
+🌟 مرحباً بك في بوت الدكتورة منار عمران 🌟
+
+أهلاً وسهلاً! يسعدني مساعدتك في الوصول إلى كل ما تحتاجه من:
+
+📚 **الكورسات التعليمية** (أكثر من 30 كورس)
+🎓 **الأكاديمية والبرامج التدريبية**
+💡 **الاستشارات الشخصية والمهنية**
+🌐 **روابط التواصل الاجتماعي**
+
+استخدم الأزرار أدناه للوصول السريع، أو اكتب ما تبحث عنه! 😊
+
+⚠️ **تنبيه مهم:** ممنوع نشر الإعلانات في هذا البوت
+"""
+    await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+
+# أمر المساعدة
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = """
+📖 **قائمة الأوامر المتاحة:**
+
+/start - رسالة الترحيب
+/courses - عرض الكورسات المتاحة
+/website - رابط الموقع الإلكتروني
+/academy - رابط الأكاديمية
+/social - روابط التواصل الاجتماعي
+/consultation - حجز استشارة
+/help - عرض هذه الرسالة
+
+يمكنك أيضاً كتابة أي استفسار وسأساعدك! 💫
+"""
+    await update.message.reply_text(help_text)
+
+# أمر الكورسات
+async def courses(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    courses_message = f"""
+📚 **الكورسات التعليمية للدكتورة منار عمران**
+
+نقدم لك أكثر من **30 كورس تعليمي** متخصص يغطي مجالات متنوعة!
+
+🎓 **أمثلة من الكورسات المتاحة:**
+• كورس الخوف وعلاجاته 🧠
+• التطوير الشخصي والنمو الذاتي ✨
+• المهارات الاحترافية والقيادية 💼
+• التسويق الرقمي والإلكتروني 📱
+• العلاقات الإنسانية والاجتماعية 🤝
+• الصحة النفسية والعاطفية 💚
+• مهارات التواصل الفعّال 🗣️
+• إدارة الوقت والإنتاجية ⏰
+• الذكاء العاطفي والاجتماعي 🌟
+• وأكثر من 20 كورس آخر!
+
+🌐 **حيث تجد الكورسات:**
+
+**1️⃣ موقع الدكتورة منار عمران:**
+{WEBSITE}
+✅ كورسات شاملة ومتنوعة
+✅ محتوى احترافي ومنظم
+✅ شهادات معتمدة عند الانتهاء
+✅ تعلم بالسرعة التي تناسبك
+
+**2️⃣ أكاديمية منار:**
+{ACADEMY}
+✅ برامج تدريبية متقدمة
+✅ مسارات تعليمية متكاملة
+✅ متابعة ودعم مستمر
+✅ تدريب عملي وتطبيقي
+
+**3️⃣ قناة اليوتيوب:**
+{YOUTUBE}
+✅ كورسات مجانية
+✅ محتوى تعليمي قيّم
+✅ فيديوهات تحفيزية
+✅ تحديثات أسبوعية
+
+🎯 **لماذا تختار كورساتنا؟**
+• خبرة طويلة في المجال
+• محتوى عربي أصيل وعالي الجودة
+• دعم فني ومتابعة مستمرة
+• أسعار تنافسية ومناسبة
+• إمكانية الوصول مدى الحياة
+
+📈 **ابدأ رحلتك التعليمية الآن واستثمر في نفسك!**
+"""
+    await update.message.reply_text(courses_message)
+
+# أمر الموقع
+async def website(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    website_message = f"""
+🌐 **موقع الدكتورة منار عمران الإلكتروني**
+
+{WEBSITE}
+
+الموقع يقدم لك:
+✨ أكثر من 30 كورس تعليمي متخصص
+✨ محتوى تعليمي احترافي ومنظم
+✨ شهادات معتمدة
+✨ إمكانية التعلم الذاتي بالوقت المناسب لك
+✨ دعم ومتابعة مستمرة
+
+زر الموقع الآن واستكشف كل ما هو جديد! 🎯
+"""
+    await update.message.reply_text(website_message)
+
+# أمر الأكاديمية
+async def academy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    academy_message = f"""
+🎓 **أكاديمية منار للتدريب**
+
+{ACADEMY}
+
+الأكاديمية توفر لك:
+🌟 برامج تدريبية متقدمة
+🌟 مسارات تعليمية متكاملة
+🌟 كورسات متخصصة في مجالات متنوعة
+🌟 شهادات احترافية معتمدة
+🌟 متابعة فردية ودعم مستمر
+
+انضم لآلاف المتدربين واصنع مستقبلك المهني! 💼
+"""
+    await update.message.reply_text(academy_message)
+
+# أمر التواصل الاجتماعي
+async def social(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    social_message = f"""
+📱 **تابعنا على وسائل التواصل الاجتماعي**
+
+تواصل مع الدكتورة منار عمران على جميع المنصات:
+
+📺 **يوتيوب:**
+{YOUTUBE}
+
+👥 **فيسبوك:**
+{FACEBOOK}
+
+🎵 **تيك توك:**
+{TIKTOK}
+
+📸 **انستغرام:**
+{INSTAGRAM}
+
+تابعنا للحصول على:
+• محتوى تعليمي يومي
+• نصائح وإرشادات مفيدة
+• إعلانات الكورسات الجديدة
+• تحديثات حصرية
+
+نحن في انتظارك! 💫
+"""
+    await update.message.reply_text(social_message)
+
+# أمر الاستشارة
+async def consultation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    consultation_message = f"""
+💼 **حجز استشارة مع الدكتورة منار عمران**
+
+هل تحتاج إلى استشارة شخصية أو مهنية؟
+الدكتورة منار جاهزة لمساعدتك! 🌟
+
+📞 **طرق التواصل لحجز الاستشارة:**
+
+**1️⃣ واتساب (الطريقة الأسرع):**
+{WHATSAPP}
+
+**2️⃣ الاتصال المباشر:**
+{PHONE}
+
+🎯 **ما ستحصل عليه:**
+• استشارة شخصية ومخصصة
+• حلول عملية لمشاكلك
+• توجيه احترافي
+• خطة عمل واضحة
+
+لا تتردد في التواصل الآن! ⏰
+"""
+    await update.message.reply_text(consultation_message)
+
+# معالج الرسائل النصية
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.lower()
     
-    def process_message(self, message_text, chat_id):
-        """معالجة الرسالة وإرجاع الرد"""
-        message_lower = message_text.lower()
-        
-        if any(word in message_lower for word in ["/start", "مرحبا", "اهلا", "السلام"]):
-            welcome_text = """
-🎓 *مرحباً في أكاديمية منارات!* 
+    # التحقق من الإعلانات
+    ad_keywords = ['إعلان', 'اعلان', 'للبيع', 'للشراء', 'تسويق', 'منتج', 'خدمة مجانية']
+    if any(keyword in text for keyword in ad_keywords):
+        await update.message.reply_text(
+            "⚠️ **تنبيه:** ممنوع نشر الإعلانات في هذا البوت.\n"
+            "يُرجى احترام قوانين المجموعة. شكراً لتفهمك! 🙏"
+        )
+        return
+    
+    # الرد على طلبات الموقع
+    if any(word in text for word in ['موقع', 'الموقع', 'موقعك', 'website']):
+        await website(update, context)
+        return
+    
+    # الرد على طلبات الأكاديمية
+    if any(word in text for word in ['أكاديمية', 'اكاديمية', 'academy']):
+        await academy(update, context)
+        return
+    
+    # الرد على طلبات الكورسات
+    if any(word in text for word in ['كورس', 'كورسات', 'دورة', 'دورات', 'courses']):
+        await courses(update, context)
+        return
+    
+    # الرد على طلبات الاستشارة
+    if any(word in text for word in ['استشارة', 'استشاره', 'consultation', 'استفسار', 'سؤال']):
+        await consultation(update, context)
+        return
+    
+    # الرد على طلبات التواصل
+    if any(word in text for word in ['تواصل', 'حسابات', 'سوشيال', 'فيس', 'انستا', 'يوتيوب', 'تيك توك']):
+        await social(update, context)
+        return
+    
+    # رد عام
+    await update.message.reply_text(
+        "شكراً لرسالتك! 😊\n\n"
+        "يمكنك استخدام الأوامر التالية:\n"
+        "• /courses للكورسات\n"
+        "• /website للموقع\n"
+        "• /consultation للاستشارة\n"
+        "• /help للمساعدة\n\n"
+        "أو اكتب ما تبحث عنه وسأساعدك! 💫"
+    )
 
-🤖 *أنا مساعدك الذكي للاستفسار عن الكورسات*
+# معالج الأزرار التفاعلية
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    # إنشاء لوحة المفاتيح للعودة
+    keyboard = [[InlineKeyboardButton("🔙 العودة للقائمة الرئيسية", callback_data='start')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if query.data == 'start':
+        # إعادة عرض القائمة الرئيسية
+        keyboard = [
+            [InlineKeyboardButton("📚 الكورسات", callback_data='courses'),
+             InlineKeyboardButton("🌐 الموقع", callback_data='website')],
+            [InlineKeyboardButton("🎓 الأكاديمية", callback_data='academy'),
+             InlineKeyboardButton("💼 حجز استشارة", callback_data='consultation')],
+            [InlineKeyboardButton("📱 التواصل الاجتماعي", callback_data='social'),
+             InlineKeyboardButton("❓ المساعدة", callback_data='help')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(
+            "🌟 **القائمة الرئيسية**\n\nاختر ما تحتاجه من الأزرار أدناه:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    elif query.data == 'courses':
+        message = f"""
+📚 **الكورسات التعليمية للدكتورة منار عمران**
 
-💫 *يمكنني مساعدتك في:*
-• عرض الكورسات المتاحة 📚
-• معلومات الأسعار 💰  
-• طريقة التسجيل 📝
-• إجابة استفساراتك 🤔
+نقدم لك أكثر من **30 كورس تعليمي** متخصص!
 
-✨ *اختر من الأوامر:*
-/courses - عرض الكورسات
-/pricing - الأسعار  
-/contact - التواصل
-            """
-            keyboard = {
-                'inline_keyboard': [[
-                    {'text': '📚 الكورسات', 'callback_data': 'show_courses'},
-                    {'text': '💰 الأسعار', 'callback_data': 'show_pricing'}
-                ], [
-                    {'text': '📞 التواصل', 'callback_data': 'show_contact'},
-                    {'text': '💬 محادثة', 'callback_data': 'start_chat'}
-                ]]
-            }
-            return self.send_message(chat_id, welcome_text, reply_markup=keyboard)
-        
-        elif any(word in message_lower for word in ["/courses", "كورس", "دورة", "كورسات"]):
-            courses_text = "📚 *كورسات أكاديمية منارات:*\n\n"
-            for i, course in enumerate(COURSES_DATA["أكاديمية منارات"]["courses"][:5], 1):
-                courses_text += f"{i}. {course}\n"
-            courses_text += f"\n*الإجمالي: 26 كورس*\n\n💬 للمزيد: +966XXXXXXXXX"
-            return self.send_message(chat_id, courses_text)
-        
-        elif any(word in message_lower for word in ["/pricing", "سعر", "ثمن", "تكلفة"]):
-            return self.send_message(chat_id, self.responses["pricing"])
-        
-        elif any(word in message_lower for word in ["/contact", "تواصل", "اتصل", "ارقام"]):
-            return self.send_message(chat_id, self.responses["contact"])
-        
-        else:
-            return self.send_message(chat_id, "🤔 للاستفسارات التفصيلية، تواصل معنا على الواتساب: +966XXXXXXXXX")
+🎓 **أمثلة من الكورسات:**
+• كورس الخوف وعلاجاته 🧠
+• التطوير الشخصي ✨
+• المهارات القيادية 💼
+• التسويق الرقمي 📱
+• العلاقات الإنسانية 🤝
+• الصحة النفسية 💚
 
-# إنشاء البوت
-bot = TelegramBot()
+🌐 **المواقع:**
+• الموقع: {WEBSITE}
+• الأكاديمية: {ACADEMY}
+• يوتيوب: {YOUTUBE}
+"""
+        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    elif query.data == 'website':
+        message = f"""
+🌐 **موقع الدكتورة منار عمران**
 
-# ويب هوك لتلجرام
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    try:
-        data = request.get_json()
-        
-        if 'message' in data:
-            message = data['message']
-            chat_id = message['chat']['id']
-            text = message.get('text', '')
-            
-            # معالجة الرسالة
-            bot.process_message(text, chat_id)
-            
-        elif 'callback_query' in data:
-            # معالجة أزرار الإنلاين
-            callback = data['callback_query']
-            chat_id = callback['message']['chat']['id']
-            data = callback['data']
-            
-            if data == 'show_courses':
-                bot.process_message('/courses', chat_id)
-            elif data == 'show_pricing':
-                bot.process_message('/pricing', chat_id)
-            elif data == 'show_contact':
-                bot.process_message('/contact', chat_id)
-            elif data == 'start_chat':
-                bot.send_message(chat_id, "💬 *المحادثة الذكية*\n\nاكتب رسالتك وسأرد عليك...")
-        
-        return jsonify({'status': 'success'})
-        
-    except Exception as e:
-        print(f"Webhook error: {e}")
-        return jsonify({'status': 'error'}), 500
+{WEBSITE}
 
-# إعداد ويب هوك
-@app.route('/set_webhook')
-def set_webhook():
-    try:
-        # الحصول على رابط التطبيق
-        webhook_url = f"https://{request.host}/webhook"
-        
-        # تعيين ويب هوك في تليجرام
-        url = f"{TELEGRAM_API_URL}/setWebhook"
-        payload = {
-            'url': webhook_url
-        }
-        
-        response = requests.post(url, json=payload)
-        result = response.json()
-        
-        return jsonify({
-            'status': 'success' if result.get('ok') else 'error',
-            'message': result.get('description', 'Unknown error'),
-            'webhook_url': webhook_url
-        })
-        
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+✨ أكثر من 30 كورس تعليمي
+✨ محتوى احترافي ومنظم
+✨ شهادات معتمدة
+✨ دعم ومتابعة مستمرة
+"""
+        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    elif query.data == 'academy':
+        message = f"""
+🎓 **أكاديمية منار**
 
-# إزالة ويب هوك (للتجربة)
-@app.route('/delete_webhook')
-def delete_webhook():
-    try:
-        url = f"{TELEGRAM_API_URL}/deleteWebhook"
-        response = requests.post(url)
-        return jsonify(response.json())
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+{ACADEMY}
 
-# الصفحة الرئيسية
-@app.route('/')
-def home():
-    return """
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-        <meta charset="UTF-8">
-        <title>بوت أكاديمية منارات</title>
-        <style>
-            body { font-family: Arial; text-align: center; padding: 50px; background: #f0f8ff; }
-            .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-            h1 { color: #2c3e50; }
-            .btn { display: inline-block; background: #3498db; color: white; padding: 12px 24px; margin: 10px; text-decoration: none; border-radius: 5px; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>🤖 بوت أكاديمية منارات</h1>
-            <p>البوت يعمل على تليجرام! اذهب إلى تليجرام وابحث عن البوت للبدء.</p>
-            
-            <div style="margin: 30px 0;">
-                <a href="/set_webhook" class="btn">🔗 تفعيل البوت</a>
-                <a href="https://t.me/ManaratAcademyBot" class="btn" target="_blank">💬 فتح تليجرام</a>
-            </div>
-            
-            <div style="background: #e8f4fd; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <h3>📝 خطوات التشغيل:</h3>
-                <p>1. انقر على "تفعيل البوت"</p>
-                <p>2. اذهب إلى تليجرام</p>
-                <p>3. ابحث عن البوت: <strong>ManaratAcademyBot</strong></p>
-                <p>4. ابدأ المحادثة بـ /start</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+🌟 برامج تدريبية متقدمة
+🌟 مسارات تعليمية متكاملة
+🌟 شهادات احترافية
+🌟 متابعة فردية
+"""
+        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    elif query.data == 'consultation':
+        message = f"""
+💼 **حجز استشارة**
 
-# التشغيل الرئيسي
+📞 **واتساب:**
+{WHATSAPP}
+
+📱 **هاتف:**
+{PHONE}
+
+🎯 استشارة مخصصة لك!
+"""
+        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    elif query.data == 'social':
+        message = f"""
+📱 **تابعنا على:**
+
+📺 يوتيوب: {YOUTUBE}
+👥 فيسبوك: {FACEBOOK}
+🎵 تيك توك: {TIKTOK}
+📸 انستغرام: {INSTAGRAM}
+"""
+        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    elif query.data == 'help':
+        message = """
+📖 **المساعدة**
+
+**الأوامر:**
+/start - البداية
+/courses - الكورسات
+/website - الموقع
+/academy - الأكاديمية
+/consultation - حجز استشارة
+/social - التواصل
+/help - المساعدة
+
+أو اكتب ما تبحث عنه! 💫
+"""
+        await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+
+# دالة معالجة الأخطاء
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.error(f"Exception while handling an update: {context.error}")
+
+# الدالة الرئيسية
+def main():
+    # إنشاء التطبيق
+    # يمكنك استخدام متغير بيئة للتوكن للأمان
+    # BOT_TOKEN = os.getenv('BOT_TOKEN', '8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo')
+    application = Application.builder().token("8265161343:AAFgiWyxz-BSZN1MA1iu-qYdLYzlapgCJzo").build()
+    
+    # إضافة المعالجات
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("courses", courses))
+    application.add_handler(CommandHandler("website", website))
+    application.add_handler(CommandHandler("academy", academy))
+    application.add_handler(CommandHandler("social", social))
+    application.add_handler(CommandHandler("consultation", consultation))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # إضافة معالج الأخطاء
+    application.add_error_handler(error_handler)
+    
+    # بدء البوت
+    logger.info("Bot is starting...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print("🚀 بدء تشغيل بوت تليجرام...")
-    print("📞 جاهز لاستقبال الرسائل من تليجرام!")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    main()
